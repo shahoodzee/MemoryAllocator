@@ -1,0 +1,5 @@
+Brian Kernighan
+2CS2850
+3Dennis Ritchie
+4and
+5The C Programming Language
