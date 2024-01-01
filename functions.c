@@ -2,6 +2,7 @@
 
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define BUSY '+'
 #define FREE ' '
@@ -21,61 +22,105 @@ void printDash(int len){
     printf("\n");
 
 }
-
 void printMemory(struct space *mem) {
-
-    printDash(mem->len);
-    for (int i = 0; i < mem->len; ++i) {
-        if (mem->sizes[i] == FREESIZE) {
-            printf("0");
-        }
+    for (int i = 0; i < mem->len; i++) {
+        printf("%c", mem->memory[i]);
     }
     printf("\n");
 }
 
 void printSizes(struct space *mem) {
-    printDash(mem->len);
-    printf("\n");
-    for (int i = 0; i < mem->len; ++i) {
-        if (mem->sizes[i] == FREESIZE) {
-            printf("0");
-        }
+    for (int i = 0; i < mem->len; i++) {
+        printf("%d", mem->sizes[i]);
     }
+    printf("\n");
 }
 
-void initializeMemory(int memSize, struct space *mem) {
-    // Allocate memory block for characters
-    mem->memory = (char *)malloc(memSize * sizeof(char));
-    
-    // Allocate memory block for sizes
-    mem->sizes = (int *)malloc(memSize * sizeof(int));
+void initializeMemory(int len, struct space *mem) {
+    mem->memory = (char *)malloc(len * sizeof(char));
+    mem->sizes = (int *)malloc(len * sizeof(int));
+    mem->len = len;
 
-    // Set len to memSize
-    mem->len = memSize;
-
-    // Initialize memory and sizes arrays
-    for (int i = 0; i < memSize; ++i) {
+    for (int i = 0; i < mem->len; i++) {
         mem->memory[i] = FREE;
         mem->sizes[i] = FREESIZE;
     }
 
-    // Print memory and sizes
     printMemory(mem);
     printSizes(mem);
 }
 
 void cleanMemory(struct space *mem) {
-    // Set all entries of memory and sizes to FREE and FREESIZE
-    for (int i = 0; i < mem->len; ++i) {
+    for (int i = 0; i < mem->len; i++) {
         mem->memory[i] = FREE;
         mem->sizes[i] = FREESIZE;
     }
 
-    // Print memory and sizes
     printMemory(mem);
     printSizes(mem);
 
-    // Free allocated memory
     free(mem->memory);
     free(mem->sizes);
+}
+
+int stackAllocator(int nbytes, struct space *mem) {
+    int t0 = 0;
+    while (t0 + nbytes < mem->len && mem->sizes[t0] != FREESIZE) {
+        t0++;
+    }
+
+    if (t0 + nbytes == mem->len) {
+        return mem->len;
+    }
+
+    int t = 0;
+    while (t < nbytes && t0 + t < mem->len) {
+        mem->memory[t0 + t] = BUSY;
+        mem->sizes[t0 + t] = BUSYSIZE;
+        t++;
+    }
+
+    mem->sizes[t0] = nbytes;
+    return t0;
+}
+
+void deallocator(int t0, struct space *mem) {
+    if (t0 == mem->len || t0 < 0) {
+        return;
+    }
+
+    int nbytes = mem->sizes[t0];
+    int t = 0;
+    while (t < nbytes) {
+        mem->memory[t0 + t] = FREE;
+        mem->sizes[t0 + t] = FREESIZE;
+        t++;
+    }
+}
+
+
+
+int main() {
+    struct space mem;
+    int len = 50;  // Adjust the length as needed
+
+    printf("Initializing Memory:\n");
+    initializeMemory(len, &mem);
+
+    printf("\nAllocating Memory:\n");
+    int allocIndex1 = stackAllocator(20, &mem);
+    printMemory(&mem);
+    printSizes(&mem);
+    printf("Allocated at Index: %d\n", allocIndex1);
+
+    printf("\nDeallocating Memory:\n");
+    deallocator(allocIndex1, &mem);
+    printMemory(&mem);
+    printSizes(&mem);
+
+    printf("\nTrying to Allocate Insufficient Memory:\n");
+    int allocIndex2 = stackAllocator(30, &mem);
+    printf("Allocated at Index: %d\n", allocIndex2);
+
+    return 0;
 }
